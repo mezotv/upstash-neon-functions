@@ -74,7 +74,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
   return (
     <div
       className={cn(
-        "flex size-full min-h-40 flex-col divide-y overflow-hidden rounded-md border bg-secondary text-xs shadow-sm ring-2 transition-all",
+        "flex size-full min-h-40 flex-col overflow-hidden rounded-xl border border-border/60 bg-secondary text-xs shadow-sm ring-2 transition-all",
         isOver ? "ring-primary" : "ring-transparent",
         className,
       )}
@@ -177,10 +177,13 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
   const items = filteredData.map((item) => item.id);
 
   return (
-    <ScrollArea className="overflow-hidden">
+    <ScrollArea className="grow overflow-hidden rounded-t-xl border border-b-0 border-neutral-300 bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800">
       <SortableContext items={items}>
         <div
-          className={cn("flex grow flex-col gap-2 p-2", className)}
+          className={cn(
+            "flex grow flex-col gap-2 overflow-hidden rounded-t-xl p-2",
+            className,
+          )}
           {...props}
         >
           {filteredData.length === 0

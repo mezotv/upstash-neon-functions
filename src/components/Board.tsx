@@ -161,13 +161,13 @@ export default function Board({
         onDragEnd={() => {
           void persistMoves();
         }}
-        className="items-start"
+        className="items-stretch"
       >
         {(column) => {
           const count = features.filter((f) => f.column === column.id).length;
 
           return (
-            <KanbanBoard id={column.id} key={column.id} className="bg-secondary/60">
+            <KanbanBoard id={column.id} key={column.id} className="bg-card">
               <KanbanHeader className="flex flex-col gap-0.5 bg-card p-3">
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
