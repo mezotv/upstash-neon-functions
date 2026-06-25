@@ -5,6 +5,7 @@ export function toBoardTicket(ticket: Ticket): BoardTicket {
   return {
     id: ticket.id,
     subject: ticket.subject,
+    body: ticket.body,
     status: ticket.status,
     priority: ticket.priority,
     customerEmail: ticket.customerEmail,
@@ -12,5 +13,8 @@ export function toBoardTicket(ticket: Ticket): BoardTicket {
     summary:
       ticket.classification?.summary ??
       (ticket.body.length > 120 ? `${ticket.body.slice(0, 120)}...` : ticket.body),
+    classification: ticket.classification,
+    draftResponse: ticket.draftResponse,
+    resolution: ticket.resolution,
   };
 }

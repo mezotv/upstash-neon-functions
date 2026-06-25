@@ -4,11 +4,17 @@ import { z } from "zod";
 
 import {
   createTicket,
+  getTicket,
   listTickets,
   markTicketWorkflowStarted,
   updateTicketStatus,
 } from "@/lib/tickets";
 import { isAuthorizedRequest, unauthorized } from "@/lib/api-auth";
+import {
+  callTriageFunction,
+  isTriageFunctionConfigured,
+  TriageFunctionError,
+} from "@/lib/triage-function";
 import { getAppBaseUrl } from "@/lib/url";
 import { ticketInputSchema, ticketStatusSchema } from "@/schemas/ticket";
 
@@ -77,6 +83,43 @@ export async function POST(request: Request) {
   }
 
   const ticket = await createTicket(payload.data);
+
+  if (isTriageFunctionConfigured()) {
+    const triagingTicket = await updateTicketStatus(ticket.id, "triaging");
+
+    try {
+      const triage = await callTriageFunction(ticket.id);
+      const updatedTicket = await getTicket(ticket.id);
+
+      return NextResponse.json(
+        { ticket: updatedTicket ?? ticket, triage },
+        { status: 201 },
+      );
+    } catch (error) {
+      if (error instanceof TriageFunctionError) {
+        return NextResponse.json(
+          {
+            ticket: triagingTicket ?? ticket,
+            warning: error.message,
+            detail: error.detail,
+          },
+          { status: 202 },
+        );
+      }
+
+      return NextResponse.json(
+        {
+          ticket: triagingTicket ?? ticket,
+          warning:
+            error instanceof Error
+              ? error.message
+              : "Ticket saved, but triage could not be started.",
+        },
+        { status: 202 },
+      );
+    }
+  }
+
   const qstashToken = process.env.QSTASH_TOKEN;
 
   if (!qstashToken) {

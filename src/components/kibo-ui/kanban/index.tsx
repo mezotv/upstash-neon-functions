@@ -30,7 +30,7 @@ import {
 import { createPortal } from "react-dom";
 import tunnel from "tunnel-rat";
 import { Card } from "@/components/ui/card";
-import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 const t = tunnel();
@@ -171,7 +171,6 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
           {filteredData.map(children)}
         </div>
       </SortableContext>
-      <ScrollBar orientation="vertical" />
     </ScrollArea>
   );
 };

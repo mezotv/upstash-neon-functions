@@ -5,6 +5,7 @@ import type {
   TicketClassification,
   TicketDraft,
   TicketInput,
+  TicketPriority,
   TicketStatus,
 } from "@/types/ticket";
 import { mapTicket } from "@/utils/map-ticket";
@@ -93,12 +94,14 @@ export async function markTicketWorkflowStarted(
 export async function saveTicketClassification(
   ticketId: string,
   classification: TicketClassification,
+  priority?: TicketPriority,
 ) {
   const sql = getSql();
   const [row] = ticketRowsSchema.parse(await sql`
     update support_tickets
     set
       classification = ${JSON.stringify(classification)}::jsonb,
+      priority = coalesce(${priority ?? null}, priority),
       status = 'drafted',
       updated_at = now()
     where id = ${ticketId}

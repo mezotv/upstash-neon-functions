@@ -88,6 +88,7 @@ export const KanbanBoard = ({ id, children, className }: KanbanBoardProps) => {
 export type KanbanCardProps<T extends KanbanItemProps = KanbanItemProps> = T & {
   children?: ReactNode;
   className?: string;
+  onClick?: HTMLAttributes<HTMLDivElement>["onClick"];
 };
 
 export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
@@ -95,6 +96,7 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
   name,
   children,
   className,
+  onClick,
 }: KanbanCardProps<T>) => {
   const {
     attributes,
@@ -115,7 +117,13 @@ export const KanbanCard = <T extends KanbanItemProps = KanbanItemProps>({
 
   return (
     <>
-      <div style={style} {...listeners} {...attributes} ref={setNodeRef}>
+      <div
+        style={style}
+        {...listeners}
+        {...attributes}
+        onClick={onClick}
+        ref={setNodeRef}
+      >
         <Card
           className={cn(
             "cursor-grab gap-4 rounded-md p-3 shadow-sm",
@@ -172,12 +180,12 @@ export const KanbanCards = <T extends KanbanItemProps = KanbanItemProps>({
     <ScrollArea className="overflow-hidden">
       <SortableContext items={items}>
         <div
-          className={cn("flex flex-grow flex-col gap-2 p-2", className)}
+          className={cn("flex grow flex-col gap-2 p-2", className)}
           {...props}
         >
           {filteredData.length === 0
             ? empty && (
-                <div className="flex flex-grow items-center justify-center rounded-md border border-dashed px-2 py-6 text-center text-xs text-muted-foreground">
+                <div className="flex grow items-center justify-center rounded-md border border-dashed px-2 py-6 text-center text-xs text-muted-foreground">
                   {empty}
                 </div>
               )

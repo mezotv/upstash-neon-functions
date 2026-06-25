@@ -16,6 +16,7 @@ export default defineConfig({
   dataApi: false,
 
   preview: {
+    aiGateway: true,
     functions: {
       // HTTP-callable triage endpoint backed by the same logic the Upstash
       // workflow uses. Slug is permanent once deployed (^[a-z0-9]{1,20}$).
@@ -24,6 +25,9 @@ export default defineConfig({
         source: "./functions/triage.ts",
         env: {
           TRIAGE_API_KEY: process.env.TRIAGE_API_KEY!,
+          TRIAGE_MODEL: process.env.TRIAGE_MODEL ?? "gemini-3-5-flash",
+          NEON_AI_GATEWAY_BASE_URL: process.env.NEON_AI_GATEWAY_BASE_URL!,
+          NEON_AI_GATEWAY_TOKEN: process.env.NEON_AI_GATEWAY_TOKEN!,
         },
       },
     },

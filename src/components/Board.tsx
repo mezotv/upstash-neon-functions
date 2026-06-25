@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,19 @@ import {
   KanbanHeader,
   KanbanProvider,
 } from "@/components/ui/kanban";
-import { BOARD_COLUMNS, PRIORITY_META } from "@/constants/board";
-import { apiKeyHeader } from "@/lib/api-key";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  TICKET_API_URL,
+  TICKET_TRIAGE_API_URL,
+  ticketApiHeaders,
+} from "@/constants/api";
+import { BOARD_COLUMNS, PRIORITY_META, STATUS_META } from "@/constants/board";
 import type { BoardFeature, BoardTicket } from "@/types/board";
 import type { TicketStatus } from "@/types/ticket";
 import { timeAgo } from "@/utils/time-ago";
@@ -27,6 +39,7 @@ export default function Board({
   tickets: BoardTicket[];
   persist: boolean;
 }) {
+  const router = useRouter();
   const [features, setFeatures] = useState<BoardFeature[]>(() =>
     tickets.map(toFeature),
   );
@@ -35,9 +48,12 @@ export default function Board({
     Object.fromEntries(tickets.map((t) => [t.id, t.status])),
   );
   const [error, setError] = useState<string | null>(null);
+  const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
 
   const signature = tickets.map((t) => `${t.id}:${t.status}`).join("|");
   const [syncedSignature, setSyncedSignature] = useState(signature);
+  const selectedTicket =
+    features.find((feature) => feature.id === selectedTicketId) ?? null;
 
   if (signature !== syncedSignature) {
     setSyncedSignature(signature);
@@ -71,13 +87,22 @@ export default function Board({
       serverColumns.current[feature.id] = feature.column;
 
       try {
-        const response = await fetch("/api/tickets", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json", ...apiKeyHeader },
-          body: JSON.stringify({ id: feature.id, status: feature.column }),
-        });
+        const isManualTriage = feature.column === "triaging";
+        const response = await fetch(
+          isManualTriage ? TICKET_TRIAGE_API_URL : TICKET_API_URL,
+          {
+            method: isManualTriage ? "POST" : "PATCH",
+            headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+            body: JSON.stringify(
+              isManualTriage
+                ? { ticketId: feature.id }
+                : { id: feature.id, status: feature.column },
+            ),
+          },
+        );
         if (!response.ok) throw new Error("Request failed");
         setError(null);
+        router.refresh();
       } catch {
         serverColumns.current[feature.id] = previous;
         setFeatures((prev) =>
@@ -148,6 +173,7 @@ export default function Board({
                       key={feature.id}
                       name={feature.name}
                       className="gap-2"
+                      onClick={() => setSelectedTicketId(feature.id)}
                     >
                       <div className="flex items-center justify-between gap-2">
                         <Badge
@@ -182,6 +208,88 @@ export default function Board({
           );
         }}
       </KanbanProvider>
+
+      <Dialog
+        open={Boolean(selectedTicket)}
+        onOpenChange={(open) => {
+          if (!open) setSelectedTicketId(null);
+        }}
+      >
+        <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
+          {selectedTicket && (
+            <>
+              <DialogHeader>
+                <div className="flex flex-wrap items-center gap-2 pr-8">
+                  <Badge
+                    variant="secondary"
+                    className={PRIORITY_META[selectedTicket.priority].className}
+                  >
+                    {PRIORITY_META[selectedTicket.priority].label}
+                  </Badge>
+                  <Badge variant="outline">
+                    {STATUS_META[selectedTicket.status].name}
+                  </Badge>
+                </div>
+                <DialogTitle className="leading-snug">
+                  {selectedTicket.subject}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedTicket.customerEmail}
+                </DialogDescription>
+              </DialogHeader>
+
+              <section className="grid gap-2">
+                <h3 className="font-medium text-sm">Customer message</h3>
+                <p className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm">
+                  {selectedTicket.body}
+                </p>
+              </section>
+
+              {selectedTicket.classification && (
+                <section className="grid gap-2">
+                  <h3 className="font-medium text-sm">AI classification</h3>
+                  <div className="grid gap-2 rounded-md border p-3 text-sm">
+                    <div className="flex flex-wrap gap-2 text-xs">
+                      <Badge variant="secondary">
+                        Category: {selectedTicket.classification.category}
+                      </Badge>
+                      <Badge variant="secondary">
+                        Sentiment: {selectedTicket.classification.sentiment}
+                      </Badge>
+                      <Badge variant="secondary">
+                        Confidence:{" "}
+                        {Math.round(selectedTicket.classification.confidence * 100)}
+                        %
+                      </Badge>
+                    </div>
+                    <p className="m-0 text-muted-foreground">
+                      {selectedTicket.classification.summary}
+                    </p>
+                  </div>
+                </section>
+              )}
+
+              {selectedTicket.draftResponse && (
+                <section className="grid gap-2">
+                  <h3 className="font-medium text-sm">Draft response</h3>
+                  <p className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm">
+                    {selectedTicket.draftResponse}
+                  </p>
+                </section>
+              )}
+
+              {selectedTicket.resolution && (
+                <section className="grid gap-2">
+                  <h3 className="font-medium text-sm">Resolution</h3>
+                  <p className="whitespace-pre-wrap rounded-md border bg-muted/30 p-3 text-sm">
+                    {selectedTicket.resolution}
+                  </p>
+                </section>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -37,9 +37,24 @@ export const ticketDraftSchema = z.object({
   nextAction: z.enum(["send", "approve", "escalate"]),
 });
 
+export const ticketTriageRequestSchema = z
+  .union([
+    z.object({ id: z.string().uuid() }),
+    z.object({ ticketId: z.string().uuid() }),
+  ])
+  .transform((input) => ({
+    id: "id" in input ? input.id : input.ticketId,
+  }));
+
 export const approvalDecisionSchema = z.object({
   approved: z.boolean(),
   note: z.string().optional(),
+});
+
+export const approvalRequestSchema = z.object({
+  ticketId: z.string().uuid(),
+  approved: z.boolean(),
+  note: z.string().max(1000).optional(),
 });
 
 export const ticketRowSchema = z.object({
@@ -56,4 +71,24 @@ export const ticketRowSchema = z.object({
   resolution: z.string().nullable(),
   created_at: z.union([z.date(), z.string()]),
   updated_at: z.union([z.date(), z.string()]),
+});
+
+export const ticketSchema = z.object({
+  id: z.string(),
+  customerEmail: z.string(),
+  subject: z.string(),
+  body: z.string(),
+  priority: ticketPrioritySchema,
+  status: ticketStatusSchema,
+  workflowRunId: z.string().nullable(),
+  approvalEventId: z.string().nullable(),
+  classification: ticketClassificationSchema.nullable(),
+  draftResponse: z.string().nullable(),
+  resolution: z.string().nullable(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const ticketsResponseSchema = z.object({
+  tickets: ticketSchema.array(),
 });
