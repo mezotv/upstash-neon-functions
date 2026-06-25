@@ -2,7 +2,6 @@ import { Client } from "@upstash/workflow";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
-import { isAuthorizedRequest, unauthorized } from "@/lib/api-auth";
 import { getTicket } from "@/lib/tickets";
 
 const approvalSchema = z.object({
@@ -12,10 +11,6 @@ const approvalSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  if (!isAuthorizedRequest(request)) {
-    return unauthorized();
-  }
-
   const payload = approvalSchema.safeParse(await request.json());
 
   if (!payload.success) {

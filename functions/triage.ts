@@ -2,10 +2,7 @@ import { timingSafeEqual } from "node:crypto";
 
 import { Hono, type Context } from "hono";
 
-import {
-  classifyTicket,
-  draftTicketResponse,
-} from "../src/lib/triage";
+import { TRIAGE_MODEL } from "../src/constants/ai";
 import { generateAiTicketTriage } from "../src/lib/ai-triage";
 import {
   createTicket,
@@ -59,7 +56,7 @@ app.get("/health", (c) =>
     aiGatewayConfigured: Boolean(
       process.env.NEON_AI_GATEWAY_BASE_URL && process.env.NEON_AI_GATEWAY_TOKEN,
     ),
-    model: process.env.TRIAGE_MODEL ?? "gemini-3-5-flash",
+    model: TRIAGE_MODEL,
   }),
 );
 
@@ -77,21 +74,12 @@ async function triageTicket(ticketId: string) {
     return null;
   }
 
-  let result = await generateAiTicketTriage(ticket);
+  const result = await generateAiTicketTriage(ticket);
 
   if (!result) {
-    if (process.env.ALLOW_TRIAGE_FALLBACK !== "true") {
-      throw new Error(
-        "AI triage is not configured. Missing Neon AI Gateway environment.",
-      );
-    }
-
-    const classification = classifyTicket(ticket);
-    result = {
-      priority: ticket.priority,
-      classification,
-      draft: draftTicketResponse(ticket, classification),
-    };
+    throw new Error(
+      "AI triage is not configured. Missing Neon AI Gateway environment.",
+    );
   }
 
   const { priority, classification, draft } = result;

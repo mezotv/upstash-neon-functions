@@ -1,15 +1,18 @@
 import { NextResponse } from "next/server";
 
-import { isAuthorizedRequest, unauthorized } from "@/lib/api-auth";
-import { getTicket, updateTicketStatus } from "@/lib/tickets";
+import {
+  getTicket,
+  markTicketWorkflowStarted,
+  updateTicketStatus,
+} from "@/lib/tickets";
+import {
+  isTicketWorkflowConfigured,
+  startTicketTriageWorkflow,
+} from "@/lib/ticket-workflow";
 import { callTriageFunction, TriageFunctionError } from "@/lib/triage-function";
 import { ticketTriageRequestSchema } from "@/schemas/ticket";
 
 export async function POST(request: Request) {
-  if (!isAuthorizedRequest(request)) {
-    return unauthorized();
-  }
-
   const payload = ticketTriageRequestSchema.safeParse(await request.json());
 
   if (!payload.success) {
@@ -25,6 +28,35 @@ export async function POST(request: Request) {
   const ticket = await updateTicketStatus(payload.data.id, "triaging");
   if (!ticket) {
     return NextResponse.json({ error: "Ticket not found." }, { status: 404 });
+  }
+
+  if (isTicketWorkflowConfigured()) {
+    try {
+      const { workflowRunId } = await startTicketTriageWorkflow(request, {
+        ticketId: ticket.id,
+        priority: ticket.priority,
+      });
+      const updatedTicket = await markTicketWorkflowStarted(
+        ticket.id,
+        workflowRunId,
+      );
+
+      return NextResponse.json(
+        { ticket: updatedTicket, workflowRunId },
+        { status: 202 },
+      );
+    } catch (error) {
+      return NextResponse.json(
+        {
+          ticket,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Could not start Upstash Workflow.",
+        },
+        { status: 500 },
+      );
+    }
   }
 
   try {

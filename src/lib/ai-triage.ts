@@ -1,6 +1,7 @@
 import { createOpenAICompatible } from "@ai-sdk/openai-compatible";
 import { generateText } from "ai";
 
+import { TRIAGE_MODEL } from "@/constants/ai";
 import { aiTriageOutputSchema } from "@/schemas/ai-triage";
 import type { TicketTriageResult } from "@/types/ai-triage";
 import type { TriageInput } from "@/types/triage";
@@ -76,7 +77,7 @@ function getNeonGatewayModel() {
     fetch: normalizeNeonGatewayResponse,
   });
 
-  return neonGateway.chatModel(process.env.TRIAGE_MODEL ?? "gemini-3-5-flash");
+  return neonGateway.chatModel(TRIAGE_MODEL);
 }
 
 function parseJsonObject(text: string): unknown {

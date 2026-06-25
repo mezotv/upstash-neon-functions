@@ -1,12 +1,10 @@
 import { serve } from "@upstash/workflow/nextjs";
 
-import { draftTicketResponse, classifyTicket } from "@/lib/triage";
+import { callTriageFunction } from "@/lib/triage-function";
 import {
   finishTicket,
   getTicket,
   markTicketWaitingForApproval,
-  saveTicketClassification,
-  saveTicketDraft,
 } from "@/lib/tickets";
 import type { ApprovalDecision } from "@/types/ticket";
 import type { TicketTriagePayload } from "@/types/workflow";
@@ -27,28 +25,19 @@ const { POST: handleWorkflowCallback } = serve<TicketTriagePayload>(
       return existingTicket;
     });
 
-    const classification = await context.run("classify ticket", async () => {
-      const result = classifyTicket(ticket);
-      await saveTicketClassification(ticket.id, result);
+    const triagedTicket = await context.run("triage with neon ai function", async () => {
+      await callTriageFunction(ticket.id);
 
-      return result;
+      const updatedTicket = await getTicket(ticket.id);
+      if (!updatedTicket) {
+        throw new Error(`Ticket ${ticket.id} disappeared during triage.`);
+      }
+
+      return updatedTicket;
     });
 
-    const draft = await context.run("draft support reply", async () => {
-      const result = draftTicketResponse(ticket, classification);
-      await saveTicketDraft(
-        ticket.id,
-        result,
-        classification.needsHumanApproval ? "waiting_for_approval" : "drafted",
-      );
-
-      return result;
-    });
-
-    if (!classification.needsHumanApproval) {
-      return await context.run("auto resolve ticket", async () => {
-        return finishTicket(ticket.id, "resolved", draft.response);
-      });
+    if (!triagedTicket.classification?.needsHumanApproval) {
+      return triagedTicket;
     }
 
     const approvalEventId = `ticket:${ticket.id}:approval`;
@@ -86,8 +75,8 @@ const { POST: handleWorkflowCallback } = serve<TicketTriagePayload>(
         ticket.id,
         "resolved",
         approval.eventData.note
-          ? `${draft.response}\n\nReviewer note: ${approval.eventData.note}`
-          : draft.response,
+          ? `${triagedTicket.draftResponse ?? "Approved reply."}\n\nReviewer note: ${approval.eventData.note}`
+          : triagedTicket.draftResponse ?? "Approved reply.",
       );
     });
   },

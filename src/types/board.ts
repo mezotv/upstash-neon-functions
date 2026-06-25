@@ -11,6 +11,8 @@ export type BoardTicket = {
   status: TicketStatus;
   priority: TicketInput["priority"];
   customerEmail: string;
+  workflowRunId: string | null;
+  approvalEventId: string | null;
   createdAt: string;
   summary: string | null;
   classification: TicketClassification | null;

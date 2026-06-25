@@ -9,6 +9,8 @@ export function toBoardTicket(ticket: Ticket): BoardTicket {
     status: ticket.status,
     priority: ticket.priority,
     customerEmail: ticket.customerEmail,
+    workflowRunId: ticket.workflowRunId,
+    approvalEventId: ticket.approvalEventId,
     createdAt: ticket.createdAt,
     summary:
       ticket.classification?.summary ??

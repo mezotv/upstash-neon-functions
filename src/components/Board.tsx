@@ -22,7 +22,6 @@ import {
 import {
   TICKET_API_URL,
   TICKET_TRIAGE_API_URL,
-  ticketApiHeaders,
 } from "@/constants/api";
 import { BOARD_COLUMNS, PRIORITY_META, STATUS_META } from "@/constants/board";
 import type { BoardFeature, BoardTicket } from "@/types/board";
@@ -91,7 +90,7 @@ export default function Board({
       try {
         const response = await fetch(TICKET_API_URL, {
           method: "PATCH",
-          headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ id: feature.id, status: feature.column }),
         });
         if (!response.ok) throw new Error("Request failed");
@@ -118,7 +117,7 @@ export default function Board({
     try {
       const response = await fetch(TICKET_TRIAGE_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketId: ticket.id }),
       });
 

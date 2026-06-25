@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { TICKET_API_URL, ticketApiHeaders } from "@/constants/api";
+import { TICKET_CREATE_API_URL } from "@/constants/api";
 import { TICKET_PRIORITIES } from "@/constants/ticket";
 import { ticketInputSchema, ticketPrioritySchema } from "@/schemas/ticket";
 import type { TicketFieldErrors, TicketSubmitResult } from "@/types/ticket-form";
@@ -83,9 +83,9 @@ export default function TicketForm({
     setStatus("loading");
 
     try {
-      const response = await fetch(TICKET_API_URL, {
+      const response = await fetch(TICKET_CREATE_API_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(valid),
       });
 

@@ -6,7 +6,10 @@ import { useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { TICKET_API_URL, ticketApiHeaders } from "@/constants/api";
+import {
+  APPROVAL_API_URL,
+  TICKET_API_URL,
+} from "@/constants/api";
 import { PRIORITY_META } from "@/constants/board";
 import type { BoardTicket } from "@/types/board";
 import type { ReviewQueueRowState } from "@/types/review-queue";
@@ -25,20 +28,27 @@ export default function ReviewQueue({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [completedIds, setCompletedIds] = useState<string[]>([]);
 
-  async function decide(id: string, approved: boolean) {
+  async function decide(ticket: BoardTicket, approved: boolean) {
+    const id = ticket.id;
     setState((prev) => ({ ...prev, [id]: approved ? "approving" : "escalating" }));
     setErrors((prev) => ({ ...prev, [id]: "" }));
 
     try {
-      const response = await fetch(TICKET_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...ticketApiHeaders },
-        body: JSON.stringify({
-          ticketId: id,
-          approved,
-          note: approved ? undefined : "Escalated by reviewer",
-        }),
-      });
+      const useWorkflowApproval = Boolean(
+        ticket.workflowRunId && ticket.approvalEventId,
+      );
+      const response = await fetch(
+        useWorkflowApproval ? APPROVAL_API_URL : TICKET_API_URL,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            ticketId: id,
+            approved,
+            note: approved ? undefined : "Escalated by reviewer",
+          }),
+        },
+      );
 
       if (!response.ok) {
         let message = `Request failed with status ${response.status}`;
@@ -143,7 +153,7 @@ export default function ReviewQueue({
               <div className="mt-3 flex items-center gap-2">
                 <Button
                   size="sm"
-                  onClick={() => decide(ticket.id, true)}
+                  onClick={() => decide(ticket, true)}
                   disabled={busy}
                 >
                   {rowState === "approving" && (
@@ -154,7 +164,7 @@ export default function ReviewQueue({
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => decide(ticket.id, false)}
+                  onClick={() => decide(ticket, false)}
                   disabled={busy}
                 >
                   {rowState === "escalating" && (

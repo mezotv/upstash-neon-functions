@@ -30,16 +30,15 @@ cp .env.example .env.local
 
 Set:
 
-- `DATABASE_URL`: your Neon database connection string
-- `TRIAGE_FUNCTION_URL`: the deployed Neon Function invocation URL
-- `TRIAGE_API_KEY`: the server-side key passed to the Neon Function
-- `TRIAGE_MODEL`: the Neon AI Gateway model used for classification and drafting
-- `NEON_AI_GATEWAY_BASE_URL` / `NEON_AI_GATEWAY_TOKEN`: pulled by `neonctl deploy` when `preview.aiGateway` is enabled
-- `NEXT_PUBLIC_TICKET_API_URL`: the browser-facing Neon Function URL
-- `NEXT_PUBLIC_TICKET_API_KEY`: the browser-facing key sent to the Neon Function
-- `NEXT_PUBLIC_API_KEY`: optional shared key used by the browser when calling app API routes
-- `QSTASH_TOKEN`: optional Upstash QStash token for the workflow fallback path
-- `APP_URL`: a public URL QStash can call for local development, or omit on Vercel
+- `DATABASE_URL`: Neon Postgres connection string from Neon Console > Project > Connection Details. See [Connect from any app](https://neon.com/docs/connect/connect-from-any-app).
+- `QSTASH_TOKEN`: Upstash QStash token from Upstash Console > QStash. See [QStash with Next.js](https://upstash.com/docs/qstash/quickstarts/vercel-nextjs).
+- `QSTASH_CURRENT_SIGNING_KEY` / `QSTASH_NEXT_SIGNING_KEY`: Upstash signing keys from Upstash Console > QStash > Signing Keys. See [Secure a Workflow](https://upstash.com/docs/workflow/howto/security).
+- `APP_URL`: public URL QStash can call in local dev. Use a tunnel like [ngrok](https://ngrok.com/docs/guides/share-localhost/quickstart), for example `ngrok http 3000`. On Vercel, this can usually be omitted because `VERCEL_URL` is available.
+- `TRIAGE_FUNCTION_URL`: deployed Neon Function URL after `neonctl deploy`. You can read it with `neonctl function get triage --branch production`. See [Neon Functions get started](https://neon.com/docs/compute/functions/get-started).
+- `TRIAGE_API_KEY`: shared server-side key you choose. It must match the value used by the Next.js app and the Neon Function.
+- `NEON_AI_GATEWAY_BASE_URL` / `NEON_AI_GATEWAY_TOKEN`: provisioned by Neon when `preview.aiGateway` is enabled and you run `neonctl deploy`. See [Neon AI Gateway get started](https://neon.com/docs/ai-gateway/get-started).
+
+Neon services are declared in `neon.ts`; see the [neon.ts reference](https://neon.com/docs/reference/neon-ts).
 
 Create the database schema in Neon:
 
@@ -57,12 +56,12 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 
 ## API Flow
 
-Create a ticket:
+Create a ticket through the app route, which starts the Upstash Workflow when
+`QSTASH_TOKEN` is configured:
 
 ```bash
-curl -X POST "$NEXT_PUBLIC_TICKET_API_URL" \
+curl -X POST http://localhost:3000/api/tickets \
   -H "content-type: application/json" \
-  -H "authorization: Bearer $NEXT_PUBLIC_TICKET_API_KEY" \
   -d '{
     "customerEmail": "ada@example.com",
     "subject": "API timeout on checkout",
@@ -71,12 +70,11 @@ curl -X POST "$NEXT_PUBLIC_TICKET_API_URL" \
   }'
 ```
 
-Triage an existing ticket:
+Triage an existing ticket through Upstash Workflow:
 
 ```bash
-curl -X POST "$NEXT_PUBLIC_TICKET_API_URL" \
+curl -X POST http://localhost:3000/api/tickets/triage \
   -H "content-type: application/json" \
-  -H "authorization: Bearer $NEXT_PUBLIC_TICKET_API_KEY" \
   -d '{ "ticketId": "00000000-0000-0000-0000-000000000000" }'
 ```
 
@@ -94,31 +92,28 @@ curl -X POST http://localhost:3000/api/approvals \
 
 ## Triage Function
 
-The board and ticket form call the deployed Neon Function directly when
-`NEXT_PUBLIC_TICKET_API_URL` is set:
+The deployed Neon Function is the worker API:
 
 - `GET /` lists tickets
 - `POST /` creates and triages a ticket, or triages an existing ticket with `ticketId`
 - `PATCH /` updates a ticket status
 
-If `NEXT_PUBLIC_TICKET_API_URL` is omitted, the app falls back to its local
-Next.js API routes.
+The UI calls local Next.js routes. Those routes start Upstash Workflows when
+configured, and the workflow calls this Neon Function for the AI/database work.
 
 Classification and draft generation run inside the Neon Function through the
-AI SDK and Neon AI Gateway. The default model is `gemini-3-5-flash`; set
-`TRIAGE_MODEL` to switch models without changing code. If the gateway call
-fails or credentials are missing, the function returns a visible error. Set
-`ALLOW_TRIAGE_FALLBACK=true` only when you want deterministic local triage as a
-fallback.
+AI SDK and Neon AI Gateway. The default model is set in `src/constants/ai.ts`.
+If the gateway call fails or credentials are missing, the function returns a
+visible error.
 
-## Workflow Fallback
+## Upstash Workflow
 
-The durable Upstash workflow fallback lives at:
+The durable Upstash workflow lives at:
 
 - `POST /api/workflows/ticket-triage`
 
-If the Neon Function URL is not configured, the intake route triggers it with an
-initial payload:
+When `QSTASH_TOKEN` is configured, ticket creation and manual triage trigger it
+with an initial payload:
 
 ```json
 {
@@ -126,6 +121,5 @@ initial payload:
 }
 ```
 
-The current classifier and draft generator are deterministic placeholders in
-`src/lib/triage.ts`. Replace them with an LLM call when you are ready to connect
-AI Gateway, OpenAI, Anthropic, or another provider.
+The workflow calls the Neon Function for AI triage, records an approval waiter
+for risky tickets, and resumes when `/api/approvals` notifies the human decision.

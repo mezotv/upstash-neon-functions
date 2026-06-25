@@ -10,7 +10,6 @@ import {
   STATUS_META,
 } from "@/constants/board";
 import { DEMO_TICKETS } from "@/constants/demo-tickets";
-import { listTicketsFromTicketApi } from "@/lib/ticket-api";
 import { listTickets } from "@/lib/tickets";
 import type { BoardTicket } from "@/types/board";
 import type { TicketStatus } from "@/types/ticket";
@@ -21,7 +20,7 @@ export const dynamic = "force-dynamic";
 
 async function loadBoard(): Promise<{ tickets: BoardTicket[]; demo: boolean }> {
   try {
-    const tickets = (await listTicketsFromTicketApi()) ?? (await listTickets());
+    const tickets = await listTickets();
     if (tickets.length === 0) {
       return { tickets: DEMO_TICKETS, demo: true };
     }

@@ -25,7 +25,6 @@ export default defineConfig({
         source: "./functions/triage.ts",
         env: {
           TRIAGE_API_KEY: process.env.TRIAGE_API_KEY!,
-          TRIAGE_MODEL: process.env.TRIAGE_MODEL ?? "gemini-3-5-flash",
           NEON_AI_GATEWAY_BASE_URL: process.env.NEON_AI_GATEWAY_BASE_URL!,
           NEON_AI_GATEWAY_TOKEN: process.env.NEON_AI_GATEWAY_TOKEN!,
         },
