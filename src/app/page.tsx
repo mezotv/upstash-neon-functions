@@ -1,5 +1,3 @@
-import { Inbox } from "lucide-react";
-
 import Board from "@/components/Board";
 import NewTicketDialog from "@/components/NewTicketDialog";
 import ReviewQueue from "@/components/ReviewQueue";
@@ -68,42 +66,28 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen">
-      <header className="sticky top-0 z-40 border-b bg-card/80 backdrop-blur">
-        <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-3">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              <Inbox className="size-4" />
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-1.5">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-semibold tracking-tight">
+                Operations board
+              </h1>
+              {demo && (
+                <span className="text-xs text-muted-foreground">
+                  Showing sample data
+                </span>
+              )}
             </div>
-            <div>
-              <p className="text-sm font-semibold leading-tight">Support Ops</p>
-              <p className="text-xs text-muted-foreground">
-                Ticket triage workspace
-              </p>
-            </div>
+            <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+              Track tickets through intake, triage, review, resolution, and
+              escalation. Drag a card to move it between columns.
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <ThemeToggle />
             <NewTicketDialog />
           </div>
-        </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-7xl flex-col gap-6 px-6 py-6">
-        <div className="flex flex-col gap-1.5">
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold tracking-tight">
-              Operations board
-            </h1>
-            {demo && (
-              <span className="text-xs text-muted-foreground">
-                Showing sample data
-              </span>
-            )}
-          </div>
-          <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-            Track tickets through intake, triage, review, resolution, and
-            escalation. Drag a card to move it between columns.
-          </p>
         </div>
 
         <section className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

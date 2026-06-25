@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   KanbanBoard,
   KanbanCard,
@@ -49,6 +50,7 @@ export default function Board({
   );
   const [error, setError] = useState<string | null>(null);
   const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
+  const [triagingTicketId, setTriagingTicketId] = useState<string | null>(null);
 
   const signature = tickets.map((t) => `${t.id}:${t.status}`).join("|");
   const [syncedSignature, setSyncedSignature] = useState(signature);
@@ -87,19 +89,11 @@ export default function Board({
       serverColumns.current[feature.id] = feature.column;
 
       try {
-        const isManualTriage = feature.column === "triaging";
-        const response = await fetch(
-          isManualTriage ? TICKET_TRIAGE_API_URL : TICKET_API_URL,
-          {
-            method: isManualTriage ? "POST" : "PATCH",
-            headers: { "Content-Type": "application/json", ...ticketApiHeaders },
-            body: JSON.stringify(
-              isManualTriage
-                ? { ticketId: feature.id }
-                : { id: feature.id, status: feature.column },
-            ),
-          },
-        );
+        const response = await fetch(TICKET_API_URL, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+          body: JSON.stringify({ id: feature.id, status: feature.column }),
+        });
         if (!response.ok) throw new Error("Request failed");
         setError(null);
         router.refresh();
@@ -115,6 +109,38 @@ export default function Board({
         );
         setError(`Could not move "${feature.subject}". Change reverted.`);
       }
+    }
+  }
+
+  async function runTriage(ticket: BoardFeature) {
+    setTriagingTicketId(ticket.id);
+
+    try {
+      const response = await fetch(TICKET_TRIAGE_API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...ticketApiHeaders },
+        body: JSON.stringify({ ticketId: ticket.id }),
+      });
+
+      if (!response.ok) {
+        const body = await response.json().catch(() => null);
+        throw new Error(
+          body && typeof body.error === "string"
+            ? body.error
+            : "AI triage failed.",
+        );
+      }
+
+      setError(null);
+      router.refresh();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : `Could not triage "${ticket.subject}".`,
+      );
+    } finally {
+      setTriagingTicketId(null);
     }
   }
 
@@ -237,6 +263,25 @@ export default function Board({
                   {selectedTicket.customerEmail}
                 </DialogDescription>
               </DialogHeader>
+
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  type="button"
+                  onClick={() => {
+                    void runTriage(selectedTicket);
+                  }}
+                  disabled={triagingTicketId === selectedTicket.id}
+                >
+                  {triagingTicketId === selectedTicket.id
+                    ? "Running AI triage..."
+                    : "Run AI triage"}
+                </Button>
+                <p className="m-0 text-xs text-muted-foreground">
+                  Dragging cards only changes status. This button is the only
+                  action that reclassifies severity and drafts.
+                </p>
+              </div>
 
               <section className="grid gap-2">
                 <h3 className="font-medium text-sm">Customer message</h3>
